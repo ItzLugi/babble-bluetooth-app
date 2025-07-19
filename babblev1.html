@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Babble</title>
+  <script src="https://cdn.tailwindcss.com "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css "/>
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .pulse-animation {
+      animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    .message-bubble {
+      max-width: 75%;
+      word-wrap: break-word;
+    }
+    .typing-indicator {
+      display: inline-flex;
+      align-items: center;
+    }
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      margin: 0 2px;
+      background-color: #60a5fa;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #374151;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+  </style>
+</head>
+<body class="bg-gray-800 h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white p-4 shadow-md">
+    <div class="container mx-auto flex justify-between items-center">
+      <div class="flex items-center space-x-4">
+        <i class="fas fa-bars text-xl"></i>
+        <h1 class="text-xl font-bold">Babble</h1>
+      </div>
+      <div class="flex items-center space-x-4">
+        <button id="bluetooth-btn" class="flex items-center space-x-2 bg-green-700 hover:bg-green-800 px-3 py-1 rounded-full transition">
+          <i class="fas fa-bluetooth-b"></i>
+          <span>Connect</span>
+        </button>
+        <button id="settings-btn" class="p-1 rounded-full hover:bg-gray-100 hover:text-gray-700 transition-colors">
+          <i class="fas fa-ellipsis-v text-xl"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="hidden md:block w-64 bg-gray-700 border-r border-gray-600 overflow-y-auto">
+      <div class="p-4 border-b border-gray-600">
+        <div class="relative">
+          <input type="text" placeholder="Search or start new chat" class="w-full bg-gray-100 rounded-lg py-2 px-4 pl-10 focus:outline-none"/>
+          <i class="fas fa-search absolute left-3 top-3 text-gray-500"></i>
+        </div>
+      </div>
+      <div class="overflow-y-auto">
+        <div class="p-3">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nearby Devices</h3>
+          <div id="devices-list" class="space-y-1"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Chat Area -->
+    <main class="flex-1 flex flex-col bg-gray-700">
+      <div class="bg-gray-700 p-4 border-b border-gray-600 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <i class="fas fa-user text-blue-500"></i>
+          </div>
+          <div>
+            <h2 class="font-medium" id="chat-title">Select a device</h2>
+            <p class="text-xs text-gray-500" id="connection-status">Not connected</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <i class="fas fa-phone text-gray-500 hover:text-green-500 cursor-pointer"></i>
+          <i class="fas fa-video text-gray-500 hover:text-green-500 cursor-pointer"></i>
+          <i class="fas fa-info-circle text-gray-500 hover:text-green-500 cursor-pointer"></i>
+        </div>
+      </div>
+
+      <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"></div>
+
+      <div class="bg-gray-700 border-t border-gray-600 p-3">
+        <div class="flex items-center space-x-2">
+          <div class="relative">
+            <button id="attachment-btn" class="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+              <i class="fas fa-paperclip"></i>
+            </button>
+            <div id="attachment-menu" class="hidden absolute bottom-full left-0 mb-2 w-48 bg-white rounded-md shadow-lg z-10">
+              <div class="py-1">
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">Add Media</a>
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">Add Files</a>
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">Send Links</a>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1 relative">
+            <input type="text" id="message-input" placeholder="Type a message" class="w-full bg-gray-700 text-white rounded-full py-2 px-4 focus:outline-none" disabled/>
+            <button class="absolute right-3 top-2 text-gray-500 hover:text-gray-700">
+              <i class="far fa-smile"></i>
+            </button>
+          </div>
+          <button id="send-btn" class="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Bluetooth Modal -->
+  <div id="pairing-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-white">Pair with device</h3>
+        <button id="close-modal" class="text-gray-500 hover:text-gray-300">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div id="available-devices" class="max-h-60 overflow-y-auto custom-scrollbar"></div>
+        <div id="pairing-status" class="text-center py-4 hidden">
+          <div class="pulse-animation">
+            <i class="fas fa-bluetooth-b text-blue-500 text-4xl mb-2"></i>
+          </div>
+          <p class="font-medium">Pairing with device...</p>
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button id="cancel-pairing" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button id="scan-devices" class="px-4 py-2 bg-blue-600 rounded-md text-sm font-medium text-white hover:bg-blue-700">
+            <i class="fas fa-sync-alt mr-2"></i> Scan Again
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SERVICE_UUID = '0000110a-0000-1000-8000-00805f9b34fb';
+    const CHARACTERISTIC_UUID = '00002a00-0000-1000-8000-00805f9b34fb';
+
+    let device = null;
+    let server = null;
+    let service = null;
+    let characteristic = null;
+    let receiving = false;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const bluetoothBtn = document.getElementById('bluetooth-btn');
+      const sendBtn = document.getElementById('send-btn');
+      const messageInput = document.getElementById('message-input');
+      const messagesContainer = document.getElementById('messages');
+      const chatTitle = document.getElementById('chat-title');
+      const connectionStatus = document.getElementById('connection-status');
+      const scanBtn = document.getElementById('scan-devices');
+      const pairingModal = document.getElementById('pairing-modal');
+      const closeBtn = document.getElementById('close-modal');
+      const cancelBtn = document.getElementById('cancel-pairing');
+      const devicesList = document.getElementById('available-devices');
+      const pairingStatus = document.getElementById('pairing-status');
+
+      let isConnected = false;
+
+      bluetoothBtn.addEventListener('click', () => {
+        if (!isConnected) {
+          showPairingModal();
+          scanDevices();
+        } else {
+          disconnectDevice();
+        }
+      });
+
+      scanBtn.addEventListener('click', scanDevices);
+      closeBtn.addEventListener('click', hidePairingModal);
+      cancelBtn.addEventListener('click', hidePairingModal);
+
+      sendBtn.addEventListener('click', sendMessage);
+      messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+      });
+
+      function showPairingModal() {
+        pairingModal.classList.remove('hidden');
+      }
+
+      function hidePairingModal() {
+        pairingModal.classList.add('hidden');
+        pairingStatus.classList.add('hidden');
+        devicesList.innerHTML = '';
+      }
+
+      async function scanDevices() {
+        devicesList.innerHTML = `
+          <div class="text-center py-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <p class="mt-2 text-sm text-gray-500">Scanning for devices...</p>
+          </div>
+        `;
+
+        try {
+          const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [SERVICE_UUID]
+          });
+
+          devicesList.innerHTML = '';
+          const div = document.createElement('div');
+          div.className = 'p-3 border rounded-lg mb-2 hover:bg-gray-50 cursor-pointer';
+          div.innerHTML = `
+            <div class="flex items-center">
+              <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                <i class="fas fa-bluetooth-b text-blue-500"></i>
+              </div>
+              <div>
+                <p class="font-medium">${device.name || 'Unnamed Device'}</p>
+                <p class="text-xs text-gray-500">Available</p>
+              </div>
+            </div>
+          `;
+          div.addEventListener('click', () => connectToDevice(device));
+          devicesList.appendChild(div);
+        } catch (error) {
+          alert('Bluetooth scan failed: ' + error);
+        }
+      }
+
+      async function connectToDevice(selectedDevice) {
+        pairingStatus.classList.remove('hidden');
+        devicesList.classList.add('hidden');
+
+        try {
+          device = selectedDevice;
+          server = await device.gatt.connect();
+          service = await server.getPrimaryService(SERVICE_UUID);
+          characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+          isConnected = true;
+          bluetoothBtn.innerHTML = '<i class="fas fa-bluetooth-b"></i><span>Disconnect</span>';
+          bluetoothBtn.classList.replace('bg-blue-700', 'bg-red-600');
+          chatTitle.textContent = device.name || 'Connected Device';
+          connectionStatus.textContent = 'Connected via Bluetooth';
+          connectionStatus.className = 'text-xs text-green-500';
+
+          messageInput.disabled = false;
+          sendBtn.disabled = false;
+
+          // Start listening for incoming messages
+          if (!receiving) {
+            await characteristic.startNotifications();
+            characteristic.addEventListener('characteristicvaluechanged', handleIncomingMessage);
+            receiving = true;
+          }
+
+          hidePairingModal();
+        } catch (error) {
+          alert('Connection failed: ' + error);
+          disconnectDevice();
+        }
+      }
+
+      function disconnectDevice() {
+        if (device && device.gatt.connected) {
+          device.gatt.disconnect();
+        }
+        isConnected = false;
+        bluetoothBtn.innerHTML = '<i class="fas fa-bluetooth-b"></i><span>Connect</span>';
+        bluetoothBtn.classList.replace('bg-red-600', 'bg-blue-700');
+        chatTitle.textContent = 'Select a device';
+        connectionStatus.textContent = 'Not connected';
+        connectionStatus.className = 'text-xs text-gray-500';
+        messageInput.disabled = true;
+        sendBtn.disabled = true;
+      }
+
+      async function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text || !characteristic) return;
+
+        const encoder = new TextEncoder();
+        await characteristic.writeValue(encoder.encode(text));
+        addSentMessage(text);
+        messageInput.value = '';
+      }
+
+      function handleIncomingMessage(event) {
+        const value = event.target.value;
+        const decoder = new TextDecoder();
+        const message = decoder.decode(value.buffer);
+        addReceivedMessage(message);
+      }
+
+      function addSentMessage(text) {
+        const msg = document.createElement('div');
+        msg.className = 'flex justify-end';
+        msg.innerHTML = `
+          <div class="message-bubble bg-blue-600 rounded-lg p-3 shadow-sm">
+            <p class="text-sm text-white">${text}</p>
+            <p class="text-xs text-gray-300 text-right mt-1">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          </div>`;
+        messagesContainer.appendChild(msg);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+
+      function addReceivedMessage(text) {
+        const msg = document.createElement('div');
+        msg.className = 'flex justify-start';
+        msg.innerHTML = `
+          <div class="message-bubble bg-gray-700 rounded-lg p-3 shadow-sm">
+            <p class="text-sm text-white">${text}</p>
+            <p class="text-xs text-gray-300 text-right mt-1">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          </div>`;
+        messagesContainer.appendChild(msg);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    });
+  </script>
+</body>
+</html>
